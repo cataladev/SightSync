@@ -4,3 +4,5 @@ opencv-python
 SpeechRecognition
 pyautogui
 pyaudio
+mediapipe
+pywin32
