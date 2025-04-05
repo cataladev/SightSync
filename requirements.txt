@@ -1,0 +1,6 @@
+eyeGestures
+scikit-learn
+opencv-python
+SpeechRecognition
+pyautogui
+pyaudio
