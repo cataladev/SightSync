@@ -3,6 +3,9 @@ import pygame_gui
 import os
 import sys
 import subprocess
+import threading
+import time
+from voice import listen_and_execute, set_voice_status, get_voice_status, should_exit_app
 
 os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = '1'
 pg.init()
@@ -80,6 +83,10 @@ def quit_game():
     pg.quit()
     sys.exit()
 
+# Start voice recognition in background
+voice_thread = threading.Thread(target=listen_and_execute, daemon=True)
+voice_thread.start()
+
 clock = pg.time.Clock()
 running = True
 
@@ -100,6 +107,10 @@ while running:
                     print("Help window is already open.")
 
         manager.process_events(event)
+
+    # Check for shutdown from voice manager
+    if should_exit_app():
+        running = False
 
     manager.update(time_delta)
     screen.fill(BG_COLOR)
