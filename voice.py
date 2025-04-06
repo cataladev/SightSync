@@ -4,82 +4,110 @@ import os
 import fnmatch
 import platform
 import getpass
+import subprocess
+import difflib
+import time
 
+# Global voice status & shutdown flag
+_voice_status = "Waiting"
+_should_exit = False
+
+def set_voice_status(status):
+    global _voice_status
+    _voice_status = status
+
+def get_voice_status():
+    return _voice_status
+
+def should_exit_app():
+    return _should_exit
+
+# Voice state flags
 is_active = False
 is_paused = False
 
 def normalize_command(command):
-    return command.lower().replace("sink", "sync").strip()
+    command = command.lower().strip()
+    command = command.replace("sink", "sync")
+    command = command.replace("sing", "sync")
+    command = command.replace("synk", "sync")
+    return command
 
 def open_app(app_name):
     if platform.system() != "Windows":
-        print("[!] 'open' command is only supported on Windows.")
+        set_voice_status("Open app unsupported on non-Windows.")
         return
 
     app_name = app_name.lower().strip()
     user = getpass.getuser()
 
-    # Start Menu paths to search
-    search_paths = [
+    start_menu_paths = [
         rf"C:\ProgramData\Microsoft\Windows\Start Menu\Programs",
         rf"C:\Users\{user}\AppData\Roaming\Microsoft\Windows\Start Menu\Programs"
     ]
+    alias_path = rf"C:\Users\{user}\AppData\Local\Microsoft\WindowsApps"
 
-    matches = []
+    candidates = {}
 
-    for base in search_paths:
+    for base in start_menu_paths:
         for root, dirs, files in os.walk(base):
             for file in files:
-                if fnmatch.fnmatch(file.lower(), "*.lnk") and app_name in file.lower():
-                    full_path = os.path.join(root, file)
-                    matches.append(full_path)
+                if file.lower().endswith(".lnk"):
+                    name = os.path.splitext(file)[0].lower()
+                    candidates[name] = os.path.join(root, file)
 
-    if matches:
-        print(f"🚀 Opening {os.path.basename(matches[0])}")
-        os.startfile(matches[0])
+    if os.path.isdir(alias_path):
+        for file in os.listdir(alias_path):
+            if file.lower().endswith(".exe"):
+                name = os.path.splitext(file)[0].lower()
+                candidates[name] = os.path.join(alias_path, file)
+
+    best_match = difflib.get_close_matches(app_name, candidates.keys(), n=1, cutoff=0.4)
+    if best_match:
+        match = best_match[0]
+        set_voice_status(f"Opening: {match}")
+        os.startfile(candidates[match])
     else:
-        print(f"[!] Could not find an app matching '{app_name}' in Start Menu.")
+        set_voice_status(f"No match found for: {app_name}")
+        print(f"[!] No match found for: {app_name}")
 
 def execute_command(command):
-    global is_active, is_paused
+    global is_active, is_paused, _should_exit
 
     command = normalize_command(command)
 
-    # Wake word handling
     if command == "sync on":
         is_active = True
         is_paused = False
-        print("✅ Sync is now ON.")
+        set_voice_status("✅ Sync ON")
         return
     elif command == "sync off":
-        print("🛑 Sync is now OFF. Exiting...")
-        exit(0)
+        set_voice_status("🛑 Sync OFF - Shutting down")
+        _should_exit = True
+        return
     elif command == "sync pause":
         if is_active:
             is_paused = True
-            print("⏸️ Sync PAUSED.")
+            set_voice_status("⏸️ Paused")
         return
     elif command == "sync resume":
         if is_active:
             is_paused = False
-            print("▶️ Sync RESUMED.")
+            set_voice_status("▶️ Resumed")
         return
 
-    # If not active or paused, ignore
     if not is_active:
-        print("⚠️ Ignoring command. Sync is OFF.")
+        set_voice_status("⚠️ Ignored - Sync OFF")
         return
     if is_paused:
-        print("⏸️ Ignoring command. Sync is PAUSED.")
+        set_voice_status("⏸️ Ignored - Paused")
         return
 
-    # "Open app" command
     if command.startswith("open "):
         app_to_open = command[5:].strip()
         open_app(app_to_open)
         return
 
-    # Action commands
     match command:
         case "click":
             pyautogui.click()
@@ -99,14 +127,14 @@ def execute_command(command):
             pyautogui.hotkey("ctrl", "r")
         case "tabs":
             pyautogui.hotkey("ctrl", "tab")
-        case "close":
+        case "kill":
             pyautogui.hotkey("alt", "f4")
         case "fullscreen":
             pyautogui.press("f11")
         case "screenshot":
             screenshot = pyautogui.screenshot()
             screenshot.save("screenshot.png")
-            print("📸 Screenshot saved as 'screenshot.png'.")
+            set_voice_status("📸 Screenshot saved")
         case "undo":
             pyautogui.hotkey("ctrl", "z")
         case "redo":
@@ -152,25 +180,57 @@ def execute_command(command):
         case "zoom out":
             pyautogui.hotkey("ctrl", "-")
         case _ if command.startswith("type "):
+            spoken_to_symbol = {
+                "dot": ".", "comma": ",", "colon": ":", "semicolon": ";",
+                "dash": "-", "hyphen": "-", "underscore": "_",
+                "slash": "/", "backslash": "\\", "exclamation mark": "!",
+                "question mark": "?", "at": "@", "hash": "#", "hashtag": "#",
+                "dollar": "$", "percent": "%", "caret": "^", "ampersand": "&",
+                "star": "*", "asterisk": "*", "plus": "+", "equals": "=",
+                "less than": "<", "greater than": ">", "open parenthesis": "(",
+                "close parenthesis": ")", "open bracket": "[", "close bracket": "]",
+                "open brace": "{", "close brace": "}", "quote": "\"", "double quote": "\"",
+                "single quote": "'", "space": " "
+            }
             text = command[5:]
-            pyautogui.write(text)
+            words = text.split()
+            output = ""
+            i = 0
+            while i < len(words):
+                if i + 1 < len(words):
+                    pair = f"{words[i]} {words[i+1]}"
+                    if pair in spoken_to_symbol:
+                        output += spoken_to_symbol[pair]
+                        i += 2
+                        continue
+                output += spoken_to_symbol.get(words[i], words[i])
+                output += " "
+                i += 1
+            pyautogui.write(output.strip())
+            set_voice_status(f"Typed: {text}")
         case _:
+            set_voice_status(f"Unknown command: {command}")
             print(f"[!] Unknown command: '{command}'")
 
 def listen_and_execute():
     recognizer = sr.Recognizer()
-    mic = sr.Microphone() 
+    mic = sr.Microphone()
 
-    with mic as source:
-        print("🎤 Listening...")
-        recognizer.adjust_for_ambient_noise(source)
-        audio = recognizer.listen(source)
+    while not _should_exit:
+        try:
+            set_voice_status("Listening...")
+            with mic as source:
+                recognizer.adjust_for_ambient_noise(source)
+                audio = recognizer.listen(source)
 
-    try:
-        command = recognizer.recognize_google(audio)
-        print(f"🗣️ Heard: {command}")
-        execute_command(command)
-    except sr.UnknownValueError:
-        print("[!] Could not understand.")
-    except sr.RequestError as e:
-        print(f"[!] Error with recognition: {e}")
+            command = recognizer.recognize_google(audio)
+            print(f"🗣️ Heard: {command}")
+            set_voice_status(f"Heard: {command}")
+            execute_command(command)
+        except sr.UnknownValueError:
+            print("[!] Could not understand.")
+            set_voice_status("Didn't catch that.")
+        except sr.RequestError as e:
+            print(f"[!] Error with recognition: {e}")
+            set_voice_status("Recognition error.")
+        time.sleep(1)
