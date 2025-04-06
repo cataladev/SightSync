@@ -33,7 +33,7 @@ while True:
     if landmark_points:
         landmarks = landmark_points[0].landmark
 
-        # We expect 478 landmarks with refine_landmarks=True.
+        # Check if we have enough landmarks (478 expected with refine_landmarks=True).
         if len(landmarks) < 478:
             cv2.putText(frame, "Not enough landmarks", (30, 40),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
@@ -52,23 +52,23 @@ while True:
         # Compute key points for each eye
         def compute_keypoints(points):
             center = np.mean(points, axis=0).astype(int)
-            top = points[np.argmin(points[:,1])]
-            bottom = points[np.argmax(points[:,1])]
-            left = points[np.argmin(points[:,0])]
-            right = points[np.argmax(points[:,0])]
+            top = points[np.argmin(points[:, 1])]
+            bottom = points[np.argmax(points[:, 1])]
+            left = points[np.argmin(points[:, 0])]
+            right = points[np.argmax(points[:, 0])]
             return center, top, bottom, left, right
 
         left_center, left_top, left_bottom, left_left, left_right = compute_keypoints(left_iris)
         right_center, right_top, right_bottom, right_left, right_right = compute_keypoints(right_iris)
 
-        # Draw key points for left eye (blue for center, yellow for boundaries)
+        # Draw key points for visualization.
+        # Left eye: blue for center, yellow for boundaries.
         cv2.circle(frame, tuple(left_center), 3, (255, 0, 0), -1)
         cv2.circle(frame, tuple(left_top), 3, (0, 255, 255), -1)
         cv2.circle(frame, tuple(left_bottom), 3, (0, 255, 255), -1)
         cv2.circle(frame, tuple(left_left), 3, (0, 255, 255), -1)
         cv2.circle(frame, tuple(left_right), 3, (0, 255, 255), -1)
-
-        # Draw key points for right eye (green for center, cyan for boundaries)
+        # Right eye: green for center, cyan for boundaries.
         cv2.circle(frame, tuple(right_center), 3, (0, 255, 0), -1)
         cv2.circle(frame, tuple(right_top), 3, (255, 255, 0), -1)
         cv2.circle(frame, tuple(right_bottom), 3, (255, 255, 0), -1)
@@ -78,6 +78,41 @@ while True:
         # Combine the two centers for a single gaze point.
         combined_center = ((left_center + right_center) / 2).astype(int)
         cv2.circle(frame, tuple(combined_center), 5, (0, 0, 255), -1)
+
+        # --- Gaze Direction Functionality ---
+        # Compute average boundaries from both eyes.
+        avg_left_boundary = (left_left[0] + right_left[0]) / 2
+        avg_right_boundary = (left_right[0] + right_right[0]) / 2
+        avg_top_boundary = (left_top[1] + right_top[1]) / 2
+        avg_bottom_boundary = (left_bottom[1] + right_bottom[1]) / 2
+
+        # Calculate horizontal and vertical ratios.
+        # The ratio is 0 when the iris center is at the left/top boundary and 1 at right/bottom.
+        if avg_right_boundary - avg_left_boundary != 0:
+            horz_ratio = (combined_center[0] - avg_left_boundary) / (avg_right_boundary - avg_left_boundary)
+        else:
+            horz_ratio = 0.5
+
+        if avg_bottom_boundary - avg_top_boundary != 0:
+            vert_ratio = (combined_center[1] - avg_top_boundary) / (avg_bottom_boundary - avg_top_boundary)
+        else:
+            vert_ratio = 0.5
+
+        # Determine gaze direction based on threshold ratios.
+        direction = ""
+        if horz_ratio < 0.4:
+            direction += "Left "
+        elif horz_ratio > 0.6:
+            direction += "Right "
+        if vert_ratio < 0.4:
+            direction += "Up"
+        elif vert_ratio > 0.6:
+            direction += "Down"
+        if direction == "":
+            direction = "Center"
+
+        cv2.putText(frame, f"Direction: {direction}", (30, 70),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
 
         # Convert the combined center from frame to screen coordinates.
         raw_screen_x = int(combined_center[0] * screen_w / frame_w)
