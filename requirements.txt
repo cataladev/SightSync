@@ -6,4 +6,4 @@ pyautogui
 pyaudio
 mediapipe
 pywin32
-pygame
+pygame-ce
