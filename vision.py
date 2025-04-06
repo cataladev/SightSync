@@ -17,7 +17,7 @@ class NoseTracker:
         self.thread = None
 
         self.smoothing_factor = 0.6
-        self.mouse_speed = 3.0
+        self.mouse_speed = 2.0
         self.click_threshold = 0.015
         self.click_counter = 0
 
@@ -83,8 +83,8 @@ class NoseTracker:
                 rel_x = (nose.x - self.base_nose_pos[0]) * self.mouse_speed
                 rel_y = (nose.y - self.base_nose_pos[1]) * self.mouse_speed
 
-                screen_x = np.interp(rel_x, [-0.4, 0.4], [0, self.screen_w])
-                screen_y = np.interp(rel_y, [-0.4, 0.4], [0, self.screen_h])
+                screen_x = np.interp(rel_x, [-0.3, 0.3], [0, self.screen_w])
+                screen_y = np.interp(rel_y, [-0.3, 0.3], [0, self.screen_h])
 
 
                 if self.pos_history:

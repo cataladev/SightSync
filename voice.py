@@ -11,6 +11,7 @@ import threading
 import numpy as np
 import noisereduce as nr
 from vision import NoseTracker
+import pygetwindow as gw
 
 pyautogui.FAILSAFE = False
 
@@ -85,18 +86,18 @@ def execute_command(command):
 
     command = normalize_command(command)
 
-    if command == "banana":
+    if command == "sync on":
         if not is_active:
             is_active = True
             is_paused = False
-            set_voice_status("✅ Sync ON")
+            set_voice_status("Sync ON")
             if not tracker_started:
                 threading.Thread(target=eye_tracker.start, daemon=True).start()
                 tracker_started = True
         return
 
-    elif command == "orange":
-        set_voice_status("🛑 Sync OFF - Shutting down")
+    elif command == "sync off":
+        set_voice_status("Sync OFF - Shutting down")
         if tracker_started:
             eye_tracker.stop()
         _should_exit = True
@@ -107,7 +108,7 @@ def execute_command(command):
             is_paused = True
             if tracker_started:
                 eye_tracker.pause()
-            set_voice_status("⏸️ Tracking Paused")
+            set_voice_status("Tracking Paused")
         return
 
     elif command == "sync resume":
@@ -115,19 +116,46 @@ def execute_command(command):
             is_paused = False
             if tracker_started:
                 eye_tracker.resume()
-            set_voice_status("▶️ Tracking Resumed")
+            set_voice_status("Tracking Resumed")
         return
 
     if not is_active:
-        set_voice_status("⚠️ Ignored - Sync OFF")
+        set_voice_status("Ignored - Sync OFF")
         return
     if is_paused:
-        set_voice_status("⏸️ Ignored - Paused")
+        set_voice_status("Ignored - Paused")
         return
 
     if command.startswith("open "):
         app_to_open = command[5:].strip()
         open_app(app_to_open)
+        return
+
+    if any(command.startswith(prefix) for prefix in ["maximize ", "minimize ", "close "]):
+        action, _, target_title = command.partition(" ")
+        matched_window = None
+
+        windows = gw.getWindowsWithTitle(target_title)
+        if not windows:
+            titles = [win.title for win in gw.getAllWindows() if win.title]
+            best_match = difflib.get_close_matches(target_title, titles, n=1, cutoff=0.4)
+            if best_match:
+                matched_window = next((win for win in gw.getAllWindows() if win.title == best_match[0]), None)
+        else:
+            matched_window = windows[0]
+
+        if matched_window:
+            if action == "maximize":
+                matched_window.maximize()
+                set_voice_status(f"Maximized: {matched_window.title}")
+            elif action == "minimize":
+                matched_window.minimize()
+                set_voice_status(f"Minimized: {matched_window.title}")
+            elif action == "close":
+                matched_window.close()
+                set_voice_status(f"Closed: {matched_window.title}")
+        else:
+            set_voice_status(f"Window not found: {target_title}")
         return
 
     match command:
@@ -153,7 +181,7 @@ def execute_command(command):
             pyautogui.hotkey("ctrl", "r")
         case "select":
             pyautogui.hotkey("enter")
-        case "kill":
+        case "close":
             pyautogui.hotkey("alt", "f4")
         case "fullscreen":
             pyautogui.press("f11")
@@ -192,9 +220,9 @@ def execute_command(command):
         case "erase line":
             pyautogui.hotkey("ctrl", "backspace")
         case "maximize":
-            pyautogui.hotkey("win", "up")
+            gw.getActiveWindow().maximize()
         case "minimize":
-            pyautogui.getActiveWindow().minimize()
+            gw.getActiveWindow().minimize()
         case "volume up":
             pyautogui.press("volumeup")
         case "volume down":
@@ -249,17 +277,7 @@ def listen_and_execute():
                 recognizer.adjust_for_ambient_noise(source)
                 audio = recognizer.listen(source)
 
-            # Convert audio to NumPy array
-            raw_audio = audio.get_raw_data()
-            audio_np = np.frombuffer(raw_audio, dtype=np.int16)
-
-            # Reduce noise
-            reduced_audio = nr.reduce_noise(y=audio_np, sr=source.SAMPLE_RATE)
-
-            # Convert back to AudioData
-            reduced_audio_data = sr.AudioData(reduced_audio.tobytes(), source.SAMPLE_RATE, audio.sample_width)
-
-            command = recognizer.recognize_google(reduced_audio_data)
+            command = recognizer.recognize_google(audio)
             print(f"🗣️ Heard: {command}")
             set_voice_status(f"Heard: {command}")
             execute_command(command)
