@@ -238,7 +238,7 @@ def execute_command(command):
         pyautogui.press("esc")
     if command_matches(command, ["space"]):
         pyautogui.press("space")
-    if command_matches(command, ["backspace"]):
+    elif command_matches(command, ["remove"]):
         pyautogui.press("backspace")
     if command_matches(command, ["delete"]):
         pyautogui.press("delete")
