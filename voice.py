@@ -41,6 +41,7 @@ def normalize_command(command):
     command = command.replace("synk", "sync")
     command = command.replace("sides", "sync")
     command = command.replace("sight", "sync")
+    command = command.replace("sightseeing", "sightsync")
     return command
 
 def open_app(app_name):

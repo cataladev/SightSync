@@ -54,7 +54,6 @@ for state in btn_states:
 help_button.border_width = 2
 help_button.shape_corner_radius = 15
 
-# Some instruction labels
 label_width = screen_width - 100
 label_height = 30
 start_x = 50
@@ -77,13 +76,12 @@ instruction_label_help = pygame_gui.elements.UILabel(
     manager=manager
 )
 
-help_window_process = None  # Track subprocess for help window
+help_window_process = None  
 
 def quit_game():
     pg.quit()
     sys.exit()
 
-# Start voice recognition in background
 voice_thread = threading.Thread(target=listen_and_execute, daemon=True)
 voice_thread.start()
 
@@ -99,16 +97,13 @@ while running:
 
         if event.type == pygame_gui.UI_BUTTON_PRESSED:
             if event.ui_element == help_button:
-                # Check if a help window is already running
                 if help_window_process is None or help_window_process.poll() is not None:
-                    # Either no process yet or the old one has exited
                     help_window_process = subprocess.Popen(["python", "help_window.py"])
                 else:
                     print("Help window is already open.")
 
         manager.process_events(event)
 
-    # Check for shutdown from voice manager
     if should_exit_app():
         running = False
 
