@@ -11,3 +11,4 @@ pywin32
 pygame-ce4
 noisereduce
 pygetwindow
+pygame-ce
