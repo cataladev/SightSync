@@ -8,9 +8,11 @@ import subprocess
 import difflib
 import time
 import threading
+import numpy as np
+import noisereduce as nr
 from vision import NoseTracker
-pyautogui.FAILSAFE = False
 
+pyautogui.FAILSAFE = False
 
 eye_tracker = NoseTracker()
 tracker_started = False
@@ -149,8 +151,8 @@ def execute_command(command):
             pyautogui.hscroll(200)
         case "refresh":
             pyautogui.hotkey("ctrl", "r")
-        case "tabs":
-            pyautogui.hotkey("alt", "tab")
+        case "select":
+            pyautogui.hotkey("enter")
         case "kill":
             pyautogui.hotkey("alt", "f4")
         case "fullscreen":
@@ -192,7 +194,7 @@ def execute_command(command):
         case "maximize":
             pyautogui.hotkey("win", "up")
         case "minimize":
-            pyautogui.hotkey("win", "down")
+            pyautogui.getActiveWindow().minimize()
         case "volume up":
             pyautogui.press("volumeup")
         case "volume down":
@@ -247,10 +249,21 @@ def listen_and_execute():
                 recognizer.adjust_for_ambient_noise(source)
                 audio = recognizer.listen(source)
 
-            command = recognizer.recognize_google(audio)
+            # Convert audio to NumPy array
+            raw_audio = audio.get_raw_data()
+            audio_np = np.frombuffer(raw_audio, dtype=np.int16)
+
+            # Reduce noise
+            reduced_audio = nr.reduce_noise(y=audio_np, sr=source.SAMPLE_RATE)
+
+            # Convert back to AudioData
+            reduced_audio_data = sr.AudioData(reduced_audio.tobytes(), source.SAMPLE_RATE, audio.sample_width)
+
+            command = recognizer.recognize_google(reduced_audio_data)
             print(f"🗣️ Heard: {command}")
             set_voice_status(f"Heard: {command}")
             execute_command(command)
+
         except sr.UnknownValueError:
             print("[!] Could not understand.")
             set_voice_status("Didn't catch that.")

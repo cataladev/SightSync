@@ -4,7 +4,6 @@ import sys
 import time
 from voice import listen_and_execute, set_voice_status, get_voice_status, should_exit_app
 
-
 # Init Pygame
 pygame.init()
 

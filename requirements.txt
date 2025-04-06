@@ -6,4 +6,5 @@ pyautogui
 pyaudio
 mediapipe
 pywin32
-pygame-ce
+pygame-ce4
+noisereduce
