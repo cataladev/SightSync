@@ -39,6 +39,8 @@ def normalize_command(command):
     command = command.replace("sink", "sync")
     command = command.replace("sing", "sync")
     command = command.replace("synk", "sync")
+    command = command.replace("sides", "sync")
+    command = command.replace("sight", "sync")
     return command
 
 def open_app(app_name):
@@ -85,16 +87,26 @@ def execute_command(command):
     command = normalize_command(command)
 
     if command == "sync on":
-        if not is_active:
+        if (not is_active ) or (is_paused):
             is_active = True
             is_paused = False
             set_voice_status("Sync ON")
+            current_window = gw.getActiveWindow()
+            if current_window:
+                current_window.minimize()
             if not tracker_started:
                 threading.Thread(target=eye_tracker.start, daemon=True).start()
                 tracker_started = True
         return
 
     elif command == "sync off":
+        set_voice_status("Sync OFF - Shutting down")
+        if tracker_started:
+            eye_tracker.stop()
+        _should_exit = True
+        return
+    
+    elif command == "sync stop":
         set_voice_status("Sync OFF - Shutting down")
         if tracker_started:
             eye_tracker.stop()
@@ -209,8 +221,6 @@ def execute_command(command):
             pyautogui.press("esc")
         case "space":
             pyautogui.press("space")
-        case "tab":
-            pyautogui.press("tab")
         case "backspace":
             pyautogui.press("backspace")
         case "delete":
