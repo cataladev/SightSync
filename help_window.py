@@ -7,7 +7,7 @@ def run_help_window():
     os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = '1'
     pg.init()
 
-    width, height = 400, 450
+    width, height = 450, 450
     help_screen = pg.display.set_mode((width, height))
     pg.display.set_caption("Sight Sync - Help")
 
@@ -55,8 +55,8 @@ def run_help_window():
     col1_y = place_bullet(col1_x + 10, col1_y, "Hold")
     col1_y = place_bullet(col1_x + 10, col1_y, "Release")
     col1_y = place_bullet(col1_x + 10, col1_y, "Switch Window")
-    col1_y = place_bullet(col1_x + 10, col1_y, "Minimize")
-    col1_y = place_bullet(col1_x + 10, col1_y, "Maximize")
+    col1_y = place_bullet(col1_x + 10, col1_y, "Minimize/Mini")
+    col1_y = place_bullet(col1_x + 10, col1_y, "Maximize/Max")
     col1_y = place_bullet(col1_x + 10, col1_y, "Fullscreen")
     col1_y = place_bullet(col1_x + 10, col1_y, "Unfullscreen")
     col1_y = place_bullet(col1_x + 10, col1_y, "Refresh")
@@ -64,9 +64,9 @@ def run_help_window():
 
     # Mouse
     col1_y = place_heading(col1_x, col1_y, "Mouse")
-    col1_y = place_bullet(col1_x + 10, col1_y, "Click")
-    col1_y = place_bullet(col1_x + 10, col1_y, "Right Click")
-    col1_y = place_bullet(col1_x + 10, col1_y, "Double Click")
+    col1_y = place_bullet(col1_x + 10, col1_y, "Click/Press")
+    col1_y = place_bullet(col1_x + 10, col1_y, "Right Click/Right Press")
+    col1_y = place_bullet(col1_x + 10, col1_y, "Double Click/Double Press")
     col1_y = place_bullet(col1_x + 10, col1_y, "Scroll Up")
     col1_y = place_bullet(col1_x + 10, col1_y, "Scroll Down")
     col1_y = place_bullet(col1_x + 10, col1_y, "Scroll Left")
@@ -99,9 +99,9 @@ def run_help_window():
 
     # Audio
     col2_y = place_heading(col2_x, col2_y, "Audio")
-    col2_y = place_bullet(col2_x + 10, col2_y, "Volume Up")
-    col2_y = place_bullet(col2_x + 10, col2_y, "Volume Down")
-    col2_y = place_bullet(col2_x + 10, col2_y, "Mute")
+    col2_y = place_bullet(col2_x + 10, col2_y, "Volume Up/Sound Up")
+    col2_y = place_bullet(col2_x + 10, col2_y, "Volume Down/Sound Down")
+    col2_y = place_bullet(col2_x + 10, col2_y, "Mute/Unmute")
     col2_y += 8
 
     # Misc

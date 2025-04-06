@@ -81,13 +81,16 @@ def open_app(app_name):
         set_voice_status(f"No match found for: {app_name}")
         print(f"[!] No match found for: {app_name}")
 
+def command_matches(command, keywords):
+    return any(k in command or command == k for k in keywords)
+
 def execute_command(command):
     global is_active, is_paused, _should_exit, tracker_started
 
     command = normalize_command(command)
 
-    if command == "sync on":
-        if (not is_active ) or (is_paused):
+    if "sync on" in command:
+        if not is_active or is_paused:
             is_active = True
             is_paused = False
             set_voice_status("Sync ON")
@@ -99,21 +102,14 @@ def execute_command(command):
                 tracker_started = True
         return
 
-    elif command == "sync off":
-        set_voice_status("Sync OFF - Shutting down")
-        if tracker_started:
-            eye_tracker.stop()
-        _should_exit = True
-        return
-    
-    elif command == "sync stop":
+    elif "sync off" in command or "sync stop" in command:
         set_voice_status("Sync OFF - Shutting down")
         if tracker_started:
             eye_tracker.stop()
         _should_exit = True
         return
 
-    elif command == "sync pause":
+    elif "sync pause" in command:
         if is_active and not is_paused:
             is_paused = True
             if tracker_started:
@@ -121,7 +117,7 @@ def execute_command(command):
             set_voice_status("Tracking Paused")
         return
 
-    elif command == "sync resume":
+    elif "sync resume" in command:
         if is_active and is_paused:
             is_paused = False
             if tracker_started:
@@ -136,12 +132,16 @@ def execute_command(command):
         set_voice_status("Ignored - Paused")
         return
 
-    if command.startswith("open "):
-        app_to_open = command[5:].strip()
-        open_app(app_to_open)
-        return
+    words = command.split()
+    if "open" in words:
+        index = words.index("open")
+        app_to_open = " ".join(words[index + 1:])
+        if app_to_open:
+            open_app(app_to_open)
+            return
 
-    if any(command.startswith(prefix) for prefix in ["maximize ", "minimize ", "close "]):
+
+    if "maximize " in command or "minimize " in command or "close " in command:
         action, _, target_title = command.partition(" ")
         matched_window = None
 
@@ -168,112 +168,132 @@ def execute_command(command):
             set_voice_status(f"Window not found: {target_title}")
         return
 
-    match command:
-        case "click":
-            pyautogui.click()
-        case "double click":
-            pyautogui.doubleClick()
-        case "right click":
-            pyautogui.rightClick()
-        case "hold":
-            pyautogui.mouseDown()
-        case "release":
-            pyautogui.mouseUp()
-        case "scroll up":
-            pyautogui.scroll(200)
-        case "scroll down":
-            pyautogui.scroll(-200)
-        case "scroll left":
-            pyautogui.hscroll(-200)
-        case "scroll right":
-            pyautogui.hscroll(200)
-        case "refresh":
-            pyautogui.hotkey("ctrl", "r")
-        case "select":
-            pyautogui.hotkey("enter")
-        case "close":
-            pyautogui.hotkey("alt", "f4")
-        case "fullscreen":
-            pyautogui.press("f11")
-        case "screenshot":
-            screenshot = pyautogui.screenshot()
-            screenshot.save("screenshot.png")
-            set_voice_status("Screenshot saved")
-        case "undo":
-            pyautogui.hotkey("ctrl", "z")
-        case "redo":
-            pyautogui.hotkey("ctrl", "y")
-        case "copy":
-            pyautogui.hotkey("ctrl", "c")
-        case "paste":
-            pyautogui.hotkey("ctrl", "v")
-        case "cut":
-            pyautogui.hotkey("ctrl", "x")
-        case "select all":
-            pyautogui.hotkey("ctrl", "a")
-        case "find":
-            pyautogui.hotkey("ctrl", "f")
-        case "save":
-            pyautogui.hotkey("ctrl", "s")
-        case "enter":
-            pyautogui.press("enter")
-        case "escape":
-            pyautogui.press("esc")
-        case "space":
-            pyautogui.press("space")
-        case "backspace":
-            pyautogui.press("backspace")
-        case "delete":
-            pyautogui.press("delete")
-        case "erase line":
-            pyautogui.hotkey("ctrl", "backspace")
-        case "maximize":
-            gw.getActiveWindow().maximize()
-        case "minimize":
-            gw.getActiveWindow().minimize()
-        case "volume up":
-            pyautogui.press("volumeup")
-        case "volume down":
-            pyautogui.press("volumedown")
-        case "mute":
-            pyautogui.press("volumemute")
-        case "zoom in":
-            pyautogui.hotkey("ctrl", "+")
-        case "zoom out":
-            pyautogui.hotkey("ctrl", "-")
-        case _ if command.startswith("type "):
-            spoken_to_symbol = {
-                "dot": ".", "comma": ",", "colon": ":", "semicolon": ";",
-                "dash": "-", "hyphen": "-", "underscore": "_",
-                "slash": "/", "backslash": "\\", "exclamation mark": "!",
-                "question mark": "?", "at": "@", "hash": "#", "hashtag": "#",
-                "dollar": "$", "percent": "%", "caret": "^", "ampersand": "&",
-                "star": "*", "asterisk": "*", "plus": "+", "equals": "=",
-                "less than": "<", "greater than": ">", "open parenthesis": "(",
-                "close parenthesis": ")", "open bracket": "[", "close bracket": "]",
-                "open brace": "{", "close brace": "}", "quote": "\"", "double quote": "\"",
-                "single quote": "'", "space": " "
-            }
-            text = command[5:]
-            words = text.split()
-            output = ""
-            i = 0
-            while i < len(words):
-                if i + 1 < len(words):
-                    pair = f"{words[i]} {words[i+1]}"
-                    if pair in spoken_to_symbol:
-                        output += spoken_to_symbol[pair]
-                        i += 2
-                        continue
-                output += spoken_to_symbol.get(words[i], words[i])
-                output += " "
-                i += 1
-            pyautogui.write(output.strip())
-            set_voice_status(f"Typed: {text}")
-        case _:
-            set_voice_status(f"Unknown command: {command}")
-            print(f"Unknown command: '{command}'")
+    if command_matches(command, ["help"]):
+        set_voice_status("Opening help window")
+        subprocess.Popen(["python", "help_window.py"])
 
+        def position_help_window():
+            time.sleep(1.5)
+            for win in gw.getAllWindows():
+                if "help" in win.title.lower():
+                    screen_width, screen_height = pyautogui.size()
+                    win.moveTo(screen_width // 2, 0)
+                    win.resizeTo(screen_width // 2, screen_height)
+                    break
+
+        threading.Thread(target=position_help_window, daemon=True).start()
+        return
+
+    if command_matches(command, ["click", "press"]):
+        pyautogui.click()
+    if command_matches(command, ["double click", "double press"]):
+        pyautogui.doubleClick()
+    if command_matches(command, ["right click", "right press"]):
+        pyautogui.rightClick()
+    if command_matches(command, ["mouse down", "hold"]):
+        pyautogui.mouseDown()
+    if command_matches(command, ["mouse up", "release"]):
+        pyautogui.mouseUp()
+
+    if command_matches(command, ["scroll up"]):
+        pyautogui.scroll(200)
+    if command_matches(command, ["scroll down"]):
+        pyautogui.scroll(-200)
+    if command_matches(command, ["scroll left"]):
+        pyautogui.hscroll(-200)
+    if command_matches(command, ["scroll right"]):
+        pyautogui.hscroll(200)
+
+    if command_matches(command, ["refresh"]):
+        pyautogui.hotkey("ctrl", "r")
+    if command_matches(command, ["select"]):
+        pyautogui.press("enter")
+    if command_matches(command, ["close"]):
+        pyautogui.hotkey("alt", "f4")
+    if command_matches(command, ["fullscreen"]):
+        pyautogui.press("f11")
+    if command_matches(command, ["screenshot"]):
+        screenshot = pyautogui.screenshot()
+        screenshot.save("screenshot.png")
+        set_voice_status("Screenshot saved")
+    if command_matches(command, ["undo"]):
+        pyautogui.hotkey("ctrl", "z")
+    if command_matches(command, ["redo"]):
+        pyautogui.hotkey("ctrl", "y")
+    if command_matches(command, ["copy"]):
+        pyautogui.hotkey("ctrl", "c")
+    if command_matches(command, ["paste"]):
+        pyautogui.hotkey("ctrl", "v")
+    if command_matches(command, ["cut"]):
+        pyautogui.hotkey("ctrl", "x")
+    if command_matches(command, ["select all"]):
+        pyautogui.hotkey("ctrl", "a")
+    if command_matches(command, ["find"]):
+        pyautogui.hotkey("ctrl", "f")
+    if command_matches(command, ["save"]):
+        pyautogui.hotkey("ctrl", "s")
+    if command_matches(command, ["enter"]):
+        pyautogui.press("enter")
+    if command_matches(command, ["escape"]):
+        pyautogui.press("esc")
+    if command_matches(command, ["space"]):
+        pyautogui.press("space")
+    if command_matches(command, ["backspace"]):
+        pyautogui.press("backspace")
+    if command_matches(command, ["delete"]):
+        pyautogui.press("delete")
+    if command_matches(command, ["erase line"]):
+        pyautogui.hotkey("ctrl", "backspace")
+    if command_matches(command, ["maximize", "max"]):
+        gw.getActiveWindow().maximize()
+    if command_matches(command, ["minimize", "mini"]):
+        gw.getActiveWindow().minimize()
+    if command_matches(command, ["volume up", "sound up"]):
+        pyautogui.press("volumeup")
+    if command_matches(command, ["volume down", "sound down"]):
+        pyautogui.press("volumedown")
+    if command_matches(command, ["mute", "unmute"]):
+        pyautogui.press("volumemute")
+    if command_matches(command, ["zoom in"]):
+        pyautogui.hotkey("ctrl", "+")
+    if command_matches(command, ["zoom out"]):
+        pyautogui.hotkey("ctrl", "-")
+
+    if "type " in command:
+        spoken_to_symbol = {
+            "dot": ".", "comma": ",", "colon": ":", "semicolon": ";",
+            "dash": "-", "hyphen": "-", "underscore": "_",
+            "slash": "/", "backslash": "\\", "exclamation mark": "!",
+            "question mark": "?", "at": "@", "hash": "#", "hashtag": "#",
+            "dollar": "$", "percent": "%", "caret": "^", "ampersand": "&",
+            "star": "*", "asterisk": "*", "plus": "+", "equals": "=",
+            "less than": "<", "greater than": ">", "open parenthesis": "(",
+            "close parenthesis": ")", "open bracket": "[", "close bracket": "]",
+            "open brace": "{", "close brace": "}", "quote": "\"", "double quote": "\"",
+            "single quote": "'", "space": " "
+        }
+        text = command[5:]
+        words = text.split()
+        output = ""
+        i = 0
+        while i < len(words):
+            if i + 1 < len(words):
+                pair = f"{words[i]} {words[i+1]}"
+                if pair in spoken_to_symbol:
+                    output += spoken_to_symbol[pair]
+                    i += 2
+                    continue
+            output += spoken_to_symbol.get(words[i], words[i])
+            output += " "
+            i += 1
+        pyautogui.write(output.strip())
+        set_voice_status(f"Typed: {text}")
+    else:
+        set_voice_status(f"Unknown command: {command}")
+        print(f"Unknown command: '{command})'")
+
+
+            
 def listen_and_execute():
     recognizer = sr.Recognizer()
     mic = sr.Microphone()
@@ -286,14 +306,14 @@ def listen_and_execute():
                 audio = recognizer.listen(source)
 
             command = recognizer.recognize_google(audio)
-            print(f"🗣️ Heard: {command}")
+            print(f"Heard: {command}")
             set_voice_status(f"Heard: {command}")
             execute_command(command)
 
         except sr.UnknownValueError:
-            print("[!] Could not understand.")
+            print("Could not understand.")
             set_voice_status("Didn't catch that.")
         except sr.RequestError as e:
-            print(f"[!] Error with recognition: {e}")
+            print(f"[Error with recognition: {e}")
             set_voice_status("Recognition error.")
         time.sleep(1)
