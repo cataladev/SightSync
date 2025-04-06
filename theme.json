@@ -1,0 +1,49 @@
+{
+    "@default": {
+        "font": {
+            "name": "arial",
+            "size": 20,
+            "bold": false
+        },
+        "text_shadow": {
+            "enabled": false
+        }
+    },
+    "#nav_title": {
+        "text_color": "#eb0707",
+        "font": {
+            "size": 22,
+            "bold": true
+        }
+    },
+    "#help_button": {
+        "normal_bg": "#2BB1EA",
+        "hovered_bg": "#2BB1EA",
+        "active_bg": "#2BB1EA",
+        "normal_text": "#FFFFFF",
+        "hovered_text": "#FFFFFF",
+        "active_text": "#FFFFFF",
+        "border_width": 2,
+        "border_color": "#FFFFFF",
+        "shape_corner_radius": "50%",
+        "font": {
+            "size": 24,
+            "bold": true
+        }
+    },
+    "#instruction_label": {
+    "text_color": "#FFFFFF",
+    "background_colour": "#1C252E",
+    "font": {
+        "size": 18
+    },
+    "text_horiz_alignment": "center"
+    },
+    "#help_popup": {
+        "normal_bg": "#F0F5FA",
+        "border_width": 1,
+        "border_color": "#C8C8D2",
+        "text_color": "#000000",
+        "title_text_color": "#1E90FF"
+    }
+}

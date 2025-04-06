@@ -4,8 +4,11 @@ opencv-python
 SpeechRecognition
 pyautogui
 pyaudio
+pygame
+pygame_gui
 mediapipe
 pywin32
 pygame-ce4
 noisereduce
 pygetwindow
+pygame-ce
