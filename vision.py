@@ -33,20 +33,20 @@ class NoseTracker:
             self.paused = False
             self.thread = threading.Thread(target=self._run, daemon=True)
             self.thread.start()
-            print("🎯 Nose tracking started.")
+            print("Tracking started.")
 
     def stop(self):
         self.running = False
         self.paused = False
-        print("🛑 Nose tracking stopped.")
+        print("Tracking stopped.")
 
     def pause(self):
         self.paused = True
-        print("⏸️ Nose tracking paused.")
+        print("Tracking paused.")
 
     def resume(self):
         self.paused = False
-        print("▶️ Nose tracking resumed.")
+        print("Tracking resumed.")
 
     def _run(self):
         while self.running:
@@ -77,7 +77,7 @@ class NoseTracker:
                 if not self.calibrated:
                     self.base_nose_pos = (nose.x, nose.y)
                     self.calibrated = True
-                    print("✅ Calibration complete.")
+                    print("Calibration complete.")
                     continue
 
                 rel_x = (nose.x - self.base_nose_pos[0]) * self.mouse_speed
@@ -98,7 +98,6 @@ class NoseTracker:
 
                 pyautogui.moveTo(smooth_x, smooth_y, _pause=False)
 
-                # Click detection based on mouth opening
                 mouth_dist = np.hypot(mouth_x - nose_x, mouth_y - nose_y) / frame_w
                 if mouth_dist < self.click_threshold:
                     self.click_counter += 1
@@ -108,18 +107,12 @@ class NoseTracker:
                 else:
                     self.click_counter = 0
 
-                # Visual feedback (optional)
                 cv2.circle(frame, (nose_x, nose_y), 5, (0, 255, 0), -1)
                 cv2.circle(frame, (mouth_x, mouth_y), 5, (0, 0, 255), -1)
 
-            cv2.imshow("Nose Tracker", frame)
+            cv2.imshow("SightSync", frame)
             if cv2.waitKey(1) & 0xFF == ord("q"):
                 self.stop()
 
         self.cam.release()
         cv2.destroyAllWindows()
-
-# Example usage:
-if __name__ == "__main__":
-    tracker = NoseTracker()
-    tracker.start()

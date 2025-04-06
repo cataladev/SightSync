@@ -18,7 +18,6 @@ pyautogui.FAILSAFE = False
 eye_tracker = NoseTracker()
 tracker_started = False
 
-# Global voice status & shutdown flag
 _voice_status = "Waiting"
 _should_exit = False
 
@@ -32,7 +31,6 @@ def get_voice_status():
 def should_exit_app():
     return _should_exit
 
-# Voice state flags
 is_active = False
 is_paused = False
 
@@ -188,7 +186,7 @@ def execute_command(command):
         case "screenshot":
             screenshot = pyautogui.screenshot()
             screenshot.save("screenshot.png")
-            set_voice_status("📸 Screenshot saved")
+            set_voice_status("Screenshot saved")
         case "undo":
             pyautogui.hotkey("ctrl", "z")
         case "redo":
@@ -264,7 +262,7 @@ def execute_command(command):
             set_voice_status(f"Typed: {text}")
         case _:
             set_voice_status(f"Unknown command: {command}")
-            print(f"[!] Unknown command: '{command}'")
+            print(f"Unknown command: '{command}'")
 
 def listen_and_execute():
     recognizer = sr.Recognizer()
