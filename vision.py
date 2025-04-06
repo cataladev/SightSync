@@ -4,6 +4,7 @@ import pyautogui
 import numpy as np
 import threading
 import time
+from collections import deque
 
 class NoseTracker:
     def __init__(self):
@@ -15,14 +16,16 @@ class NoseTracker:
         self.paused = False
         self.thread = None
 
-        self.gain = 450
-        self.deadzone = 0.002
-        self.smooth_factor = 0.23
-        self.prev_dx = 0
-        self.prev_dy = 0
+        self.smoothing_factor = 0.6
+        self.mouse_speed = 3.0
+        self.click_threshold = 0.015
+        self.click_counter = 0
+
+        self.nose_index = 4
+        self.mouth_index = 13
+        self.base_nose_pos = None
         self.calibrated = False
-        self.calib_dx = 0
-        self.calib_dy = 0
+        self.pos_history = deque(maxlen=3)
 
     def start(self):
         if not self.running:
@@ -46,10 +49,6 @@ class NoseTracker:
         print("▶️ Nose tracking resumed.")
 
     def _run(self):
-        frames_for_calibration = 30
-        dx_samples = []
-        dy_samples = []
-
         while self.running:
             if self.paused:
                 time.sleep(0.05)
@@ -66,54 +65,61 @@ class NoseTracker:
             if results.multi_face_landmarks:
                 landmarks = results.multi_face_landmarks[0].landmark
 
-                nose_tip = landmarks[1]
-                left_eye = landmarks[33]
-                right_eye = landmarks[263]
+                nose = landmarks[self.nose_index]
+                mouth = landmarks[self.mouth_index]
 
-                eye_center_x = (left_eye.x + right_eye.x) / 2
-                eye_center_y = (left_eye.y + right_eye.y) / 2
+                frame_h, frame_w = frame.shape[:2]
+                nose_x = int(nose.x * frame_w)
+                nose_y = int(nose.y * frame_h)
+                mouth_x = int(mouth.x * frame_w)
+                mouth_y = int(mouth.y * frame_h)
 
-                dx = nose_tip.x - eye_center_x
-                dy = nose_tip.y - eye_center_y
-
-                # First 30 frames → collect for calibration
                 if not self.calibrated:
-                    dx_samples.append(dx)
-                    dy_samples.append(dy)
+                    self.base_nose_pos = (nose.x, nose.y)
+                    self.calibrated = True
+                    print("✅ Calibration complete.")
+                    continue
 
-                    if len(dx_samples) >= frames_for_calibration:
-                        self.calib_dx = np.mean(dx_samples)
-                        self.calib_dy = np.mean(dy_samples)
-                        self.calibrated = True
-                        print("✅ Calibration complete.")
-                    else:
-                        print(f"📐 Calibrating... {len(dx_samples)}/{frames_for_calibration}")
-                        continue
+                rel_x = (nose.x - self.base_nose_pos[0]) * self.mouse_speed
+                rel_y = (nose.y - self.base_nose_pos[1]) * self.mouse_speed
 
-                # Subtract calibration baseline
-                dx -= self.calib_dx
-                dy -= self.calib_dy
+                screen_x = np.interp(rel_x, [-0.4, 0.4], [0, self.screen_w])
+                screen_y = np.interp(rel_y, [-0.4, 0.4], [0, self.screen_h])
 
-                # Deadzone
-                if abs(dx) < self.deadzone:
-                    dx = 0
-                if abs(dy) < self.deadzone:
-                    dy = 0
 
-                # Smooth movement
-                dx = self.prev_dx + (dx - self.prev_dx) * self.smooth_factor
-                dy = self.prev_dy + (dy - self.prev_dy) * self.smooth_factor
-                self.prev_dx = dx
-                self.prev_dy = dy
+                if self.pos_history:
+                    last_x, last_y = self.pos_history[-1]
+                    smooth_x = last_x * self.smoothing_factor + screen_x * (1 - self.smoothing_factor)
+                    smooth_y = last_y * self.smoothing_factor + screen_y * (1 - self.smoothing_factor)
+                else:
+                    smooth_x, smooth_y = screen_x, screen_y
 
-                # Convert to screen coordinates
-                move_x = int(dx * self.gain)
-                move_y = int(dy * self.gain)
-                cur_x, cur_y = pyautogui.position()
+                self.pos_history.append((smooth_x, smooth_y))
 
-                new_x = np.clip(cur_x + move_x, 0, self.screen_w)
-                new_y = np.clip(cur_y + move_y, 0, self.screen_h)
-                pyautogui.moveTo(new_x, new_y)
+                pyautogui.moveTo(smooth_x, smooth_y, _pause=False)
+
+                # Click detection based on mouth opening
+                mouth_dist = np.hypot(mouth_x - nose_x, mouth_y - nose_y) / frame_w
+                if mouth_dist < self.click_threshold:
+                    self.click_counter += 1
+                    if self.click_counter > 5:
+                        pyautogui.click()
+                        self.click_counter = 0
+                else:
+                    self.click_counter = 0
+
+                # Visual feedback (optional)
+                cv2.circle(frame, (nose_x, nose_y), 5, (0, 255, 0), -1)
+                cv2.circle(frame, (mouth_x, mouth_y), 5, (0, 0, 255), -1)
+
+            cv2.imshow("Nose Tracker", frame)
+            if cv2.waitKey(1) & 0xFF == ord("q"):
+                self.stop()
 
         self.cam.release()
         cv2.destroyAllWindows()
+
+# Example usage:
+if __name__ == "__main__":
+    tracker = NoseTracker()
+    tracker.start()

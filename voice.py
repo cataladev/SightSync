@@ -83,7 +83,7 @@ def execute_command(command):
 
     command = normalize_command(command)
 
-    if command == "sync on":
+    if command == "banana":
         if not is_active:
             is_active = True
             is_paused = False
@@ -93,7 +93,7 @@ def execute_command(command):
                 tracker_started = True
         return
 
-    elif command == "sync off":
+    elif command == "orange":
         set_voice_status("🛑 Sync OFF - Shutting down")
         if tracker_started:
             eye_tracker.stop()
@@ -143,10 +143,14 @@ def execute_command(command):
             pyautogui.scroll(200)
         case "scroll down":
             pyautogui.scroll(-200)
+        case "scroll left":
+            pyautogui.hscroll(-200)
+        case "scroll right":
+            pyautogui.hscroll(200)
         case "refresh":
             pyautogui.hotkey("ctrl", "r")
         case "tabs":
-            pyautogui.hotkey("ctrl", "tab")
+            pyautogui.hotkey("alt", "tab")
         case "kill":
             pyautogui.hotkey("alt", "f4")
         case "fullscreen":
