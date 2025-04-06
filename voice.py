@@ -7,6 +7,13 @@ import getpass
 import subprocess
 import difflib
 import time
+import threading
+from vision import NoseTracker
+pyautogui.FAILSAFE = False
+
+
+eye_tracker = NoseTracker()
+tracker_started = False
 
 # Global voice status & shutdown flag
 _voice_status = "Waiting"
@@ -72,28 +79,41 @@ def open_app(app_name):
         print(f"[!] No match found for: {app_name}")
 
 def execute_command(command):
-    global is_active, is_paused, _should_exit
+    global is_active, is_paused, _should_exit, tracker_started
 
     command = normalize_command(command)
 
     if command == "sync on":
-        is_active = True
-        is_paused = False
-        set_voice_status("✅ Sync ON")
+        if not is_active:
+            is_active = True
+            is_paused = False
+            set_voice_status("✅ Sync ON")
+            if not tracker_started:
+                threading.Thread(target=eye_tracker.start, daemon=True).start()
+                tracker_started = True
         return
+
     elif command == "sync off":
         set_voice_status("🛑 Sync OFF - Shutting down")
+        if tracker_started:
+            eye_tracker.stop()
         _should_exit = True
         return
+
     elif command == "sync pause":
-        if is_active:
+        if is_active and not is_paused:
             is_paused = True
-            set_voice_status("⏸️ Paused")
+            if tracker_started:
+                eye_tracker.pause()
+            set_voice_status("⏸️ Tracking Paused")
         return
+
     elif command == "sync resume":
-        if is_active:
+        if is_active and is_paused:
             is_paused = False
-            set_voice_status("▶️ Resumed")
+            if tracker_started:
+                eye_tracker.resume()
+            set_voice_status("▶️ Tracking Resumed")
         return
 
     if not is_active:
